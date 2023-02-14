@@ -1,1 +1,1 @@
-1st commit
+Simulation of survival of rock, paper and scizors
