@@ -2,8 +2,8 @@
 """
 
 import numpy as np
-import random
 from typing import Tuple
+from settings import SIZE_BOX
 
 class RPS():
     def __init__(self,position:Tuple=None,sort:str=None):        
@@ -20,8 +20,8 @@ class RPS():
         try: 
             x,y = vals 
         except TypeError:
-            self._x = random.random()
-            self._y = random.random()
+            self._x = SIZE_BOX*np.random.rand()
+            self._y = SIZE_BOX*np.random.rand()
         else:
             self._x = x
             self._y = y
@@ -39,10 +39,10 @@ class RPS():
     @sort.setter
     def sort(self,val):
         if val is None:
-            rnd = random.random()
+            rnd = np.random.rand()
             if rnd<0.33:
                 val1 = "r"
-            if 0.33<rnd<0.66:
+            elif rnd>0.33 and rnd<0.66:
                 val1 = "p"
             else:
                 val1 = "s"
