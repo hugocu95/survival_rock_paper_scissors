@@ -4,9 +4,9 @@
 import sys
 import threading
 import queue 
-from lib.rps import HandShape
+from lib.RPS import HandShape
 from lib.mover import Dynamics
-from lib.gui import Application
+from lib.GUI import Application
 from settings import NR_ELEMENTS, NR_THREADS
 
 if sys.version_info[0] < 3:
