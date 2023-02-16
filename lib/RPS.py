@@ -1,18 +1,25 @@
-""" Class rock-paper-scizors
+""" Class rock-paper-scissors
 """
 
-import numpy as np
 from typing import Tuple
+import numpy as np
 from settings import SIZE_BOX
 
-class RPS():
+class HandShape():
+    """Class for defining the position and sort of the hand shape i.e. rock, paper or scissors
+    """
     def __init__(self,position:Tuple=None,sort:str=None):        
         self.position = position
         # Select sort (rock paper or scissor)
         self.sort = sort   
     
     @property
-    def position(self):
+    def position(self)->Tuple[float,float]:
+        """Property for the position of the hand shape
+
+        Returns:
+            Tuple[float,float]: x,y coordinates
+        """
         return self._x, self._y
     
     @position.setter
@@ -33,7 +40,12 @@ class RPS():
         del self._y
             
     @property 
-    def sort(self):
+    def sort(self)->str:
+        """Defines the sort i.e. type of the hand shape; rock, paper or scissor
+
+        Returns:
+            str: "r" = rock, "p" = paper, "s" = scissor
+        """
         return self._sort
         
     @sort.setter
@@ -42,7 +54,7 @@ class RPS():
             rnd = np.random.rand()
             if rnd<0.33:
                 val1 = "r"
-            elif rnd>0.33 and rnd<0.66:
+            elif 0.33 < rnd < 0.66:
                 val1 = "p"
             else:
                 val1 = "s"

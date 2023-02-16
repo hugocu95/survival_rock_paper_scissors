@@ -1,16 +1,14 @@
 """Dynamics of imaginary system
 
 Rules of the fake simulation are as follows:
-1) Particles of same sort are attracted to each other according to a square law rule
-2) Particles of are atracted to stronger sort according to a square law rule
-3) Particles of are repelled to weaker sort according to a square law rule
-4) On top of that, there is a random movement with uniform distribution in x,y
+1) Particles move randomly with uniform distribution in x,y
+2) If the distance of the moving particle to another particle is smaller than the 
+    THRESHOLD_CHANGE_SORT and there is a type weakness, the particle will change of type
 """
 import time
-import numpy as np
 import threading
-from typing import Tuple
-from settings import SIZE_BOX, THRESHOLD_CHANGE_SORT, NR_ELEMENTS, SEED, SLEEPTIME_THREAD
+import numpy as np
+from settings import SIZE_BOX, THRESHOLD_CHANGE_SORT, NR_ELEMENTS, SEED, SLEEPTIME_THREAD, MAX_STEP_SIZE
 
 np.random.seed(SEED)
 
@@ -18,11 +16,12 @@ class Dynamics(threading.Thread):
     def __init__(self,particles,queue,stop_event):
         self.min_distance = SIZE_BOX
         self.index_min = 0
+        self.change_sort = False
+
         self.particles = particles
         self.queue = queue
         self.stop_event = stop_event
         
-        self.cntr=0
         threading.Thread.__init__(self, name="mover_thread")
 
     def get_min_distance(self, index:int):
@@ -35,6 +34,7 @@ class Dynamics(threading.Thread):
             distance = self.individual_distance(self.particles[index],self.particles[i])
             
             if self.min_distance > distance and distance > THRESHOLD_CHANGE_SORT:
+                self.min_distance = distance
                 if self.weakness(self.particles[index],self.particles[i]):
                     self.change_sort = True                
                 else:
@@ -45,35 +45,32 @@ class Dynamics(threading.Thread):
 
     def weakness(self,part1,part2):
         # Defines if the sort of part1 is weak to the sort of part2
-        if (part1.sort == "r" and part2.sort == "p") or \
+        return (part1.sort == "r" and part2.sort == "p") or \
             (part1.sort == "p" and part2.sort == "s") or \
-            (part1.sort == "s" and part2.sort == "r"):
-            return True
-        else:
-            return False
-                
+            (part1.sort == "s" and part2.sort == "r")
+             
     def modify_sort(self,part):
-        if (part.sort == "r"):
+        if part.sort == "r":
             part.sort = "p"
             
-        elif (part.sort == "p"):
+        elif part.sort == "p":
             part.sort = "s"
             
-        elif (part.sort == "s"):
+        elif part.sort == "s":
             part.sort = "r"
         
     def move_particle(self,part):
         while True:
-            Dx = 1-2*np.random.rand()
-            new_x = Dx+part._x
-            if new_x > 0 and new_x < SIZE_BOX:          
+            dx = MAX_STEP_SIZE*(1-2*np.random.rand())
+            new_x = dx+part._x
+            if 0 < new_x < SIZE_BOX:          
                 part._x = new_x
                 break
             
         while True:
-            Dy = 1-2*np.random.rand()
-            new_y = Dy+part._y
-            if new_y > 0 and new_y < SIZE_BOX:          
+            dy = MAX_STEP_SIZE*(1-2*np.random.rand())
+            new_y = dy+part._y
+            if 0 < new_y < SIZE_BOX:          
                 part._y = new_y
                 break
     
@@ -85,7 +82,7 @@ class Dynamics(threading.Thread):
         #send index and particle object to queue
         while not self.stop_event.is_set():
             time.sleep(SLEEPTIME_THREAD)
-            self.cntr=self.cntr+1
+
             index = int(np.floor((NR_ELEMENTS)*np.random.rand()))
             self.get_min_distance(index)
             
@@ -94,7 +91,7 @@ class Dynamics(threading.Thread):
             
             self.move_particle(self.particles[index])
             
-            self.queue.put((index,self.particles[index]))
+            self.queue.put(item=(index,self.particles[index]))
     
     def join(self):
         threading.Thread.join(self)

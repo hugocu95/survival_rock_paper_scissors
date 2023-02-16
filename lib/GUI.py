@@ -1,25 +1,52 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import matplotlib.pyplot as plt
+"""Graphics User Interface for polotting the hand shapes (rock, paper, scissors)
+"""
 import sys
+import time
+import queue
 import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from settings import COLOR_PAPER, COLOR_ROCK, COLOR_SCISSOR, SIZE_BOX, TIMEOUT
+
 if sys.version_info[0] < 3:
     import Tkinter as tk
 else:
     import tkinter as tk
-import time
-from settings import COLOR_PAPER, COLOR_ROCK, COLOR_SCISSOR, SIZE_BOX, TIMEOUT
-    
+
 class Application(tk.Frame):
-    def __init__(self,master,initial_state: list,queue):
+    """Creates application for plotting hand shapes
+    """
+    def __init__(self, master: tk.Tk, initial_state:list, queue_data: queue.Queue):
+        """Constructor of application
+
+        Args:
+            master (tk.Tk): window of tkinter 
+            initial_state (list): list of objects of type HandShape
+            queue_data (queue.Queue): (index (int), instance of HandShape)
+        """
         master.protocol("WM_DELETE_WINDOW", lambda args=master:self.on_closing(args))
-        self.queue = queue
+        self.queue = queue_data
         self.initial_state = initial_state
+        self.indx = []
+        self.part = []
+        
+        # Position, color and area of the hand shapes being plotted
+        self.X = np.zeros(len(self.initial_state))
+        self.Y = np.zeros(len(self.initial_state))
+        self.color = len(self.initial_state)*["k"]
+        self.area = 5*np.ones(len(self.initial_state))
+        
         self.init_time = time.time()
         tk.Frame.__init__(self,master)
-        self.createWidgets(master)
+        self.create_widgets(master)
         
         
-    def createWidgets(self,master):
+    def create_widgets(self,master: tk.Tk):
+        """Creates canvas and calls update_plot to constantly refresh it
+
+        Args:
+            master (tk.Tk): window of tkinter 
+        """
         self.fig, self.ax = plt.subplots(figsize=(8,8))
         self.canvas=FigureCanvasTkAgg(self.fig,master=master)
         self.canvas.get_tk_widget().grid(row=0,column=1)
@@ -30,14 +57,10 @@ class Application(tk.Frame):
         self.update_plot(master)
         
     def first_plot(self):
-        self.X = np.zeros(len(self.initial_state))
-        self.Y = np.zeros(len(self.initial_state))
-        self.color = len(self.initial_state)*["k"]
-        self.area = 5*np.ones(len(self.initial_state))
-        
-        for i in range(len(self.initial_state)):
-            self.X[i] = self.initial_state[i]._x
-            self.Y[i] = self.initial_state[i]._y
+        """Stores and plots the position and sorts of instances of HandShape
+        """
+        for i,_ in enumerate(self.initial_state):
+            self.X[i], self.Y[i] = self.initial_state[i].position
         
             if self.initial_state[i].sort == "r":
                 self.color[i] = COLOR_ROCK
@@ -46,46 +69,64 @@ class Application(tk.Frame):
             elif self.initial_state[i].sort == "s":
                 self.color[i] = COLOR_SCISSOR
 
+        self.ax.set_title("rock=red, paper=green, scissor=blue")
         self.ax.set_xlim([0,SIZE_BOX])
         self.ax.set_ylim([0,SIZE_BOX])                
         self.ax.scatter(self.X,self.Y,s=self.area,c=self.color,alpha=0.9)
 
         
-    def update_plot(self,master):
-        #Try to check if there is data in the queue
+    def update_plot(self,master:tk.Tk):
+        """Constantly refreshes the plot of instances of HandShape
+
+        Args:
+            master (tk.Tk): window of tkinter
+        """
         try:      
-            indx,part=self.queue.get_nowait()
+            while not self.queue.empty():  
+                indx,part=self.queue.get_nowait()
+                self.indx.append(indx)
+                self.part.append(part)
+
             now = time.time()
             if TIMEOUT > now-self.init_time:
-                self.X[indx] = part._x
-                self.Y[indx] = part._y
-            
-                if part.sort == "r":
-                    self.color[indx] = COLOR_ROCK
-                elif part.sort == "p":
-                    self.color[indx] = COLOR_PAPER
-                else:
-                    self.color[indx] = COLOR_SCISSOR
+                for i,_ in enumerate(self.indx):
+                    self.X[i], self.Y[i] = self.initial_state[i].position
                 
-                self.canvas.draw()
+                    if self.part[i].sort == "r":
+                        self.color[self.indx[i]] = COLOR_ROCK
+                    elif self.part[i].sort == "p":
+                        self.color[self.indx[i]] = COLOR_PAPER
+                    else:
+                        self.color[self.indx[i]] = COLOR_SCISSOR
+                        
+                self.indx.clear()
+                self.part.clear()
+                                    
+                self.canvas.draw()               
                 self.ax.clear()
+                
                 self.ax.set_title("rock=red, paper=green, scissor=blue")
                 self.ax.set_xlim([0,SIZE_BOX])
                 self.ax.set_ylim([0,SIZE_BOX])
-                self.ax.scatter(self.X,self.Y,s=self.area,c=self.color,alpha=0.7)
                 
+                self.ax.scatter(self.X,self.Y,s=self.area,c=self.color,alpha=0.7)
+
                 master.after(1,lambda arg=master: self.update_plot(arg))
             
             else:
-                print(TIMEOUT,now-self.init_time)
                 print ('Time elapsed. Killing GUI now')
                 master.after(1,lambda:master.quit())
                 master.after(1,lambda:master.destroy())
 
-        except:
+        except queue.Empty:
             master.after(10,lambda arg=master: self.update_plot(arg))
 
-    def on_closing(self,master):
+    def on_closing(self,master: tk.Tk):
+        """Ensures a smooth closing of the app if the "X" button for closing is clicked
+
+        Args:
+            master (tk.Tk): window of tkinter
+        """
         print("closing GUI")
         master.after(10,lambda:master.quit())
         master.after(10,lambda:master.destroy())
